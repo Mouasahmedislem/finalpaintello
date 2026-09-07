@@ -241,6 +241,98 @@ router.get('/admin/whatsapp/media/:mediaId', middleware.isLoggedIn, requireAdmin
   }
 });
 
+// ===================== ADMIN ORDER MANAGEMENT =====================
+const ALLOWED_ORDER_STATUSES = [
+  'pending', 'confirmed', 'processing', 'ready_for_pickup',
+  'shipped', 'out_for_delivery', 'delivered', 'cancelled',
+  'refunded', 'on_hold'
+];
+
+router.get('/admin/orders', middleware.isLoggedIn, requireAdmin, async (req, res) => {
+  try {
+    const { status, search } = req.query;
+    let query = {};
+
+    if (status && ALLOWED_ORDER_STATUSES.includes(status)) {
+      query.status = status;
+    }
+
+    if (search && search.trim()) {
+      const searchRegex = new RegExp(search.trim(), 'i');
+      const numSearch = parseInt(search.trim().replace(/\D/g, ''), 10);
+
+      query.$or = [
+        { firstName: searchRegex },
+        { lastName: searchRegex },
+        { address: searchRegex },
+        { city: searchRegex },
+        { commune: searchRegex },
+        { trackingNumber: searchRegex }
+      ];
+
+      if (!isNaN(numSearch)) {
+        query.$or.push({ numero: numSearch });
+      }
+
+      if (search.trim().length === 24) {
+        query.$or.push({ _id: search.trim() });
+      }
+    }
+
+    const orders = await Order.find(query).sort({ createdAt: -1 }).lean();
+
+    res.render('admin/orders', {
+      orders,
+      statusFilter: status || 'all',
+      searchFilter: search || '',
+      allowedStatuses: ALLOWED_ORDER_STATUSES,
+      Cart,
+      csrfToken: req.csrfToken(),
+      flashErrors: req.flash('error'),
+      user: req.user
+    });
+
+  } catch (err) {
+    console.error('❌ Admin orders error:', err);
+    res.status(500).send('Server Error');
+  }
+});
+
+router.post('/admin/orders/:id/status', middleware.isLoggedIn, requireAdmin, async (req, res) => {
+  try {
+    const { status, trackingNumber, adminNotes } = req.body;
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+      req.flash('error', 'Commande introuvable.');
+      return res.redirect('/user/admin/orders');
+    }
+
+    if (status && ALLOWED_ORDER_STATUSES.includes(status)) {
+      order.status = status;
+      if (status === 'delivered' && !order.actualDelivery) {
+        order.actualDelivery = new Date();
+      }
+    }
+
+    if (typeof trackingNumber !== 'undefined') {
+      order.trackingNumber = trackingNumber.trim();
+    }
+
+    if (typeof adminNotes !== 'undefined') {
+      order.adminNotes = adminNotes.trim();
+    }
+
+    await order.save();
+    res.redirect('/user/admin/orders');
+
+  } catch (err) {
+    console.error('❌ Update order status error:', err);
+    req.flash('error', 'Erreur lors de la mise à jour de la commande.');
+    res.redirect('/user/admin/orders');
+  }
+});
+
 // ===================== PRODUCT CREATION =====================
 router.get('/admin/products/new', middleware.isLoggedIn, requireAdmin, async (req, res) => {
   res.render('admin/product-new', {
@@ -252,7 +344,7 @@ router.get('/admin/products/new', middleware.isLoggedIn, requireAdmin, async (re
 
 router.post('/admin/products/new', middleware.isLoggedIn, requireAdmin, async (req, res) => {
   try {
-    const { title, subtitle, price, buyPrice, stock, category, type, modelType, image, description } = req.body;
+    const { title, subtitle, price, buyPrice, oldPrice, stock, category, type, modelType, image, description, status, href, videoId, videoFile, stlFile } = req.body;
 
     if (!title || !price) {
       req.flash('error', 'Product title and price are required.');
@@ -266,7 +358,8 @@ router.post('/admin/products/new', middleware.isLoggedIn, requireAdmin, async (r
 
     const numericPrice = parseFloat(price) || 0;
     const numericBuyPrice = parseFloat(buyPrice) || 0;
-    const numericStock = parseInt(stock) >= 0 ? parseInt(stock) : 10;
+    const numericOldPrice = oldPrice ? parseFloat(oldPrice) : null;
+    const numericStock = parseInt(stock, 10) >= 0 ? parseInt(stock, 10) : 10;
     const isDisponible = numericStock > 0;
 
     if (modelType === 'Paintello') {
@@ -279,7 +372,8 @@ router.post('/admin/products/new', middleware.isLoggedIn, requireAdmin, async (r
         category: (category || 'vases').toLowerCase().trim(),
         type: (type || '').toLowerCase().trim(),
         image: imageArray,
-        status: 'New'
+        status: status ? status.trim() : 'New',
+        href: href ? href.trim() : undefined
       });
     } else {
       await Producthome.create({
@@ -287,11 +381,15 @@ router.post('/admin/products/new', middleware.isLoggedIn, requireAdmin, async (r
         subtitle: subtitle ? subtitle.trim() : '',
         price: numericPrice,
         buyPrice: numericBuyPrice,
+        oldPrice: numericOldPrice,
         stock: numericStock,
         type: (type || category || 'vases').toLowerCase().trim(),
         disponible: isDisponible,
         image: imageArray,
-        description: description ? description.trim() : ''
+        description: description ? description.trim() : '',
+        videoId: videoId ? videoId.trim() : undefined,
+        videoFile: videoFile ? videoFile.trim() : null,
+        stlFile: stlFile ? stlFile.trim() : null
       });
     }
 

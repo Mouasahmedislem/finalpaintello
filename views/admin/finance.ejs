@@ -39,8 +39,11 @@
       </div>
 
       <div class="flex flex-wrap items-center gap-2">
-        <a href="/user/admin/products/new" class="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition shadow-sm flex items-center gap-1.5">
-          <i class="fa-solid fa-plus text-emerald-400"></i> Nouveau Produit
+        <a href="/user/admin/orders" class="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition shadow-sm flex items-center gap-1.5">
+          <i class="fa-solid fa-boxes-packing text-indigo-400"></i> Commandes
+        </a>
+        <a href="/user/admin/products/new" class="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition">
+          <i class="fa-solid fa-plus mr-1.5"></i> Nouveau Produit
         </a>
         <a href="/user/profile" class="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition">
           <i class="fa-solid fa-arrow-left mr-1.5"></i> Mon Profil
@@ -260,6 +263,7 @@
                 <th class="py-3 px-6 font-semibold">Modèle Source</th>
                 <th class="py-3 px-6 font-semibold">Prix d'Achat (Coût DA)</th>
                 <th class="py-3 px-6 font-semibold">Prix de Vente (DA)</th>
+                <th class="py-3 px-6 font-semibold">Stock En Réserve</th>
                 <th class="py-3 px-6 font-semibold">Marge Unitaire</th>
                 <th class="py-3 px-6 font-semibold text-center">Livrés / Total Ventes</th>
                 <th class="py-3 px-6 font-semibold text-right">Bénéfice Réalisé</th>
@@ -270,6 +274,7 @@
                 const pId = product._id.toString();
                 const buyP = Number(product.buyPrice) || 0;
                 const sellP = Number(product.price) || 0;
+                const stockQty = typeof product.stock !== 'undefined' && product.stock !== null ? Number(product.stock) : 10;
                 const unitProfit = sellP - buyP;
                 const totalSold = productSalesMap[pId] || 0;
                 const deliveredSold = productDeliveredSalesMap[pId] || 0;
@@ -291,6 +296,12 @@
                       <input type="number" step="0.01" min="0" name="buyPrice" value="<%= buyP %>"
                              class="w-full pl-2 pr-7 py-1 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-slate-900">
                       <span class="absolute right-2 top-1 text-[10px] text-slate-400 font-semibold">DA</span>
+                    </div>
+                  </td>
+                  <td class="py-3 px-6">
+                    <div class="relative w-24">
+                      <input type="number" min="0" name="stock" value="<%= stockQty %>"
+                             class="w-full px-2 py-1 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-slate-900">
                     </div>
                   </td>
                   <td class="py-3 px-6">

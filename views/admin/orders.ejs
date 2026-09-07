@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gestion des Commandes - Admin Panel</title>
+
+  <!-- Tailwind CSS & FontAwesome -->
+  <link rel="stylesheet" href="/css/tailwind-output.css">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+  </style>
+</head>
+<body class="p-4 sm:p-6 lg:p-8">
+  <div class="max-w-7xl mx-auto space-y-8">
+
+    <!-- Navigation Header -->
+    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-indigo-800 bg-indigo-100 rounded-full">
+            <i class="fa-solid fa-boxes-packing mr-1"></i> Dashboard Admin Commandes
+          </span>
+          <span class="text-xs text-slate-400">• Direct DB Management</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-light tracking-tight text-slate-900 uppercase mt-1">Gestion des Commandes</h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Visualisez, recherchez, mettez à jour le statut, le numéro de suivi et les notes de vos commandes sans passer par la console Mongoose.
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <a href="/user/admin/finance" class="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition">
+          <i class="fa-solid fa-chart-line mr-1.5"></i> Finance & Marges
+        </a>
+        <a href="/user/admin/products/new" class="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition">
+          <i class="fa-solid fa-plus mr-1.5"></i> Nouveau Produit
+        </a>
+        <a href="/user/admin/whatsapp" class="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition">
+          <i class="fa-brands fa-whatsapp mr-1.5"></i> WhatsApp
+        </a>
+        <a href="/user/profile" class="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition">
+          <i class="fa-solid fa-arrow-left mr-1.5"></i> Profil
+        </a>
+      </div>
+    </div>
+
+    <!-- Flash Messages -->
+    <% if (flashErrors && flashErrors.length > 0) { %>
+      <div class="bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
+        <i class="fa-solid fa-triangle-exclamation text-rose-500"></i>
+        <span><%= flashErrors[0] %></span>
+      </div>
+    <% } %>
+
+    <!-- Filter & Search Bar -->
+    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+      <form action="/user/admin/orders" method="GET" class="w-full flex flex-col md:flex-row items-center gap-3">
+        <div class="relative w-full md:w-80">
+          <input type="text" name="search" value="<%= searchFilter %>" placeholder="Rechercher (Nom, Téléphone, ID...)"
+                 class="w-full pl-9 pr-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-900">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-xs text-slate-400"></i>
+        </div>
+
+        <div class="w-full md:w-48">
+          <select name="status" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-900">
+            <option value="all" <%= statusFilter === 'all' ? 'selected' : '' %>>Tous les statuts</option>
+            <% allowedStatuses.forEach(st => { %>
+              <option value="<%= st %>" <%= statusFilter === st ? 'selected' : '' %>><%= st %></option>
+            <% }) %>
+          </select>
+        </div>
+
+        <button type="submit" class="w-full md:w-auto px-5 py-2 bg-slate-900 text-white text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-slate-800 transition">
+          <i class="fa-solid fa-filter mr-1.5"></i> Filtrer
+        </button>
+
+        <% if (searchFilter || statusFilter !== 'all') { %>
+          <a href="/user/admin/orders" class="text-xs text-slate-500 hover:text-slate-800 underline">Réinitialiser</a>
+        <% } %>
+      </form>
+
+      <span class="text-xs text-slate-500 font-semibold whitespace-nowrap">
+        <%= orders.length %> commande(s) trouvée(s)
+      </span>
+    </div>
+
+    <!-- Orders List -->
+    <div class="space-y-6">
+      <% if (orders.length === 0) { %>
+        <div class="bg-white p-12 text-center rounded-xl border border-slate-200 text-slate-400">
+          <i class="fa-solid fa-box-open text-4xl mb-3"></i>
+          <p class="text-sm">Aucune commande ne correspond aux critères de recherche.</p>
+        </div>
+      <% } else { %>
+        <% orders.forEach(order => { %>
+          <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden p-6 space-y-4">
+
+            <!-- Order Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-2">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-bold text-slate-900 uppercase">Commande #<%= order._id %></span>
+                  <span class="text-[10px] px-2 py-0.5 rounded font-semibold bg-slate-100 text-slate-700 uppercase">
+                    <%= order.orderType || 'guest' %>
+                  </span>
+                  <span class="text-xs text-slate-400">
+                    • <%= new Date(order.createdAt).toLocaleString('fr-FR') %>
+                  </span>
+                </div>
+                <h3 class="text-base font-bold text-slate-800 mt-1">
+                  <%= order.firstName %> <%= order.lastName %>
+                  <span class="text-xs font-normal text-slate-500 mr-2">(<%= order.formattedPhone || order.numero %>)</span>
+                </h3>
+                <p class="text-xs text-slate-500">
+                  <i class="fa-solid fa-location-dot mr-1"></i> <%= order.address %>, <%= order.commune %>, <%= order.city %> (<%= order.country %>)
+                </p>
+              </div>
+
+              <div class="text-left sm:text-right">
+                <span class="text-xs text-slate-400 uppercase font-semibold">Montant Total</span>
+                <p class="text-xl font-bold text-emerald-600"><%= (order.totalWithShipping || 0).toLocaleString() %> DA</p>
+                <p class="text-[11px] text-slate-400">Frais de livraison: <%= (order.shippingFee || 0).toLocaleString() %> DA</p>
+              </div>
+            </div>
+
+            <!-- Order Items -->
+            <div>
+              <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Articles Commandés</h4>
+              <div class="bg-slate-50 p-3 rounded-lg divide-y divide-slate-200">
+                <%
+                  const cart = new Cart(order.cart || {});
+                  const items = cart.generateArray();
+                %>
+                <% items.forEach(item => { %>
+                  <div class="py-2 flex items-center justify-between text-xs text-slate-700">
+                    <div class="flex items-center gap-2">
+                      <span class="font-bold text-slate-900"><%= item.qty %>x</span>
+                      <span><%= item.item ? item.item.title : 'Produit' %></span>
+                    </div>
+                    <span class="font-semibold text-slate-900"><%= (item.price || 0).toLocaleString() %> DA</span>
+                  </div>
+                <% }) %>
+              </div>
+            </div>
+
+            <!-- Order Update Form -->
+            <form action="/user/admin/orders/<%= order._id %>/status" method="POST" class="bg-slate-50 p-4 rounded-lg border border-slate-200 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+              <div>
+                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Statut Commande</label>
+                <select name="status" class="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-slate-900 bg-white">
+                  <% allowedStatuses.forEach(st => { %>
+                    <option value="<%= st %>" <%= order.status === st ? 'selected' : '' %>><%= st %></option>
+                  <% }) %>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Numéro de Suivi (Tracking)</label>
+                <input type="text" name="trackingNumber" value="<%= order.trackingNumber || '' %>" placeholder="Ex: Yalidine-12345"
+                       class="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-slate-900 bg-white">
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Note Admin</label>
+                <input type="text" name="adminNotes" value="<%= order.adminNotes || '' %>" placeholder="Ex: Client rappelé / livraison reportée"
+                       class="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-slate-900 bg-white">
+              </div>
+
+              <div>
+                <button type="submit" class="w-full py-1.5 bg-slate-900 text-white text-xs font-semibold uppercase tracking-wider rounded hover:bg-slate-800 transition">
+                  <i class="fa-solid fa-floppy-disk mr-1"></i> Enregistrer
+                </button>
+              </div>
+            </form>
+
+          </div>
+        <% }) %>
+      <% } %>
+    </div>
+
+  </div>
+</body>
+</html>
