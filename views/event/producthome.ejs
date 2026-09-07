@@ -2401,13 +2401,9 @@ input:focus, select:focus, textarea:focus {
 
       <!-- Right: Product info -->
       <%
-        // `disponible` is meant to be a boolean stock flag, but a record can end up with
-        // it stored as something else (string "false", 0...) depending on how it was
-        // saved - a strict `!== false` comparison then always reads as "in stock"
-        // regardless. Treat any of these as unavailable; anything else (including a
-        // missing field) as available, matching the prior default behavior.
         function isProductAvailable(p) {
           if (!p) return true;
+          if (typeof p.stock === 'number' && p.stock <= 0) return false;
           const v = p.disponible;
           return !(v === false || v === 'false' || v === 0 || v === '0' || v === 'no' || v === 'non');
         }

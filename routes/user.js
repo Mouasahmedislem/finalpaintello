@@ -252,7 +252,7 @@ router.get('/admin/products/new', middleware.isLoggedIn, requireAdmin, async (re
 
 router.post('/admin/products/new', middleware.isLoggedIn, requireAdmin, async (req, res) => {
   try {
-    const { title, subtitle, price, buyPrice, category, type, modelType, image, description } = req.body;
+    const { title, subtitle, price, buyPrice, stock, category, type, modelType, image, description } = req.body;
 
     if (!title || !price) {
       req.flash('error', 'Product title and price are required.');
@@ -266,12 +266,16 @@ router.post('/admin/products/new', middleware.isLoggedIn, requireAdmin, async (r
 
     const numericPrice = parseFloat(price) || 0;
     const numericBuyPrice = parseFloat(buyPrice) || 0;
+    const numericStock = parseInt(stock) >= 0 ? parseInt(stock) : 10;
+    const isDisponible = numericStock > 0;
 
     if (modelType === 'Paintello') {
       await Paintello.create({
         title: title.trim(),
         price: numericPrice,
         buyPrice: numericBuyPrice,
+        stock: numericStock,
+        disponible: isDisponible,
         category: (category || 'vases').toLowerCase().trim(),
         type: (type || '').toLowerCase().trim(),
         image: imageArray,
@@ -283,8 +287,9 @@ router.post('/admin/products/new', middleware.isLoggedIn, requireAdmin, async (r
         subtitle: subtitle ? subtitle.trim() : '',
         price: numericPrice,
         buyPrice: numericBuyPrice,
+        stock: numericStock,
         type: (type || category || 'vases').toLowerCase().trim(),
-        disponible: true,
+        disponible: isDisponible,
         image: imageArray,
         description: description ? description.trim() : ''
       });
@@ -461,13 +466,14 @@ router.get('/admin/finance', middleware.isLoggedIn, requireAdmin, async (req, re
 
 router.post('/admin/finance/update-prices', middleware.isLoggedIn, requireAdmin, async (req, res) => {
   try {
-    let { productId, sourceModel, buyPrice, sellPrice } = req.body;
+    let { productId, sourceModel, buyPrice, sellPrice, stock } = req.body;
 
     if (!Array.isArray(productId)) {
       productId = productId ? [productId] : [];
       sourceModel = sourceModel ? [sourceModel] : [];
       buyPrice = buyPrice ? [buyPrice] : [];
       sellPrice = sellPrice ? [sellPrice] : [];
+      stock = stock ? [stock] : [];
     }
 
     const updates = [];
@@ -476,11 +482,13 @@ router.post('/admin/finance/update-prices', middleware.isLoggedIn, requireAdmin,
       const modelName = sourceModel[i];
       const bPrice = Math.max(0, parseFloat(buyPrice[i]) || 0);
       const sPrice = Math.max(0, parseFloat(sellPrice[i]) || 0);
+      const stQty = Math.max(0, parseInt(stock[i]) || 0);
+      const isAvailable = stQty > 0;
 
       if (modelName === 'Paintello') {
-        updates.push(Paintello.findByIdAndUpdate(id, { buyPrice: bPrice, price: sPrice }));
+        updates.push(Paintello.findByIdAndUpdate(id, { buyPrice: bPrice, price: sPrice, stock: stQty, disponible: isAvailable }));
       } else if (modelName === 'Producthome') {
-        updates.push(Producthome.findByIdAndUpdate(id, { buyPrice: bPrice, price: sPrice }));
+        updates.push(Producthome.findByIdAndUpdate(id, { buyPrice: bPrice, price: sPrice, stock: stQty, disponible: isAvailable }));
       }
     }
 
@@ -488,7 +496,7 @@ router.post('/admin/finance/update-prices', middleware.isLoggedIn, requireAdmin,
     res.redirect('/user/admin/finance');
   } catch (err) {
     console.error('❌ Update price error:', err);
-    req.flash('error', 'Erreur lors de la mise à jour des prix.');
+    req.flash('error', 'Erreur lors de la mise à jour des prix et stocks.');
     res.redirect('/user/admin/finance');
   }
 });

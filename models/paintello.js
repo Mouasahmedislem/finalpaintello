@@ -7,6 +7,14 @@ const paintelloSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  disponible: {
+    type: Boolean,
+    default: true
+  },
+  stock: {
+    type: Number,
+    default: 10
+  },
   image: [String],
   href: String,
   status: String,

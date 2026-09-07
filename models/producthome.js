@@ -17,6 +17,10 @@ const producthomeSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  stock: {
+    type: Number,
+    default: 10
+  },
   image: [String],         
   description: String,     
   details: Object,         
