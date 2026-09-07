@@ -118,7 +118,9 @@ function escapeRegex(str) {
 // sidesteps Mongoose's query-side casting entirely while still catching those cases.
 const UNAVAILABLE_VALUES = [false, 0, 'false', '0', 'no', 'non'];
 function isAvailable(product) {
-  return !UNAVAILABLE_VALUES.includes(product && product.disponible);
+  if (!product) return false;
+  if (typeof product.stock === 'number' && product.stock <= 0) return false;
+  return !UNAVAILABLE_VALUES.includes(product.disponible);
 }
 
 // ===== BLOCK NOISE ROUTES - NO CAPI =====
@@ -725,6 +727,35 @@ router.post("/checkout", async (req, res) => {
       });
       await order.save();
 
+      // Decrement product stock
+      if (cart.items) {
+        for (const key in cart.items) {
+          const itemObj = cart.items[key];
+          const qty = itemObj.qty || 1;
+          const item = itemObj.item || {};
+          const productId = (item._id || key).toString();
+
+          if (mongoose.isValidObjectId(productId)) {
+            const ph = await Producthome.findById(productId);
+            if (ph) {
+              const currentStock = typeof ph.stock === 'number' ? ph.stock : 10;
+              const newStock = Math.max(0, currentStock - qty);
+              ph.stock = newStock;
+              if (newStock <= 0) ph.disponible = false;
+              await ph.save().catch(() => {});
+            }
+            const pt = await Paintello.findById(productId);
+            if (pt) {
+              const currentStock = typeof pt.stock === 'number' ? pt.stock : 10;
+              const newStock = Math.max(0, currentStock - qty);
+              pt.stock = newStock;
+              if (newStock <= 0) pt.disponible = false;
+              await pt.save().catch(() => {});
+            }
+          }
+        }
+      }
+
       const eventIds = req.session.preGeneratedEventIds || {};
       const eventIdInitiateCheckout = eventIds.initiateCheckout || generateEventId();
       const testCode = eventIds.testCode || getTestCode(req);
@@ -898,6 +929,35 @@ router.get("/payment/success", async (req, res) => {
       paymentMethod: "chargily"
     });
     await order.save();
+
+    // Decrement product stock for Chargily orders
+    if (cart.items) {
+      for (const key in cart.items) {
+        const itemObj = cart.items[key];
+        const qty = itemObj.qty || 1;
+        const item = itemObj.item || {};
+        const productId = (item._id || key).toString();
+
+        if (mongoose.isValidObjectId(productId)) {
+          const ph = await Producthome.findById(productId);
+          if (ph) {
+            const currentStock = typeof ph.stock === 'number' ? ph.stock : 10;
+            const newStock = Math.max(0, currentStock - qty);
+            ph.stock = newStock;
+            if (newStock <= 0) ph.disponible = false;
+            await ph.save().catch(() => {});
+          }
+          const pt = await Paintello.findById(productId);
+          if (pt) {
+            const currentStock = typeof pt.stock === 'number' ? pt.stock : 10;
+            const newStock = Math.max(0, currentStock - qty);
+            pt.stock = newStock;
+            if (newStock <= 0) pt.disponible = false;
+            await pt.save().catch(() => {});
+          }
+        }
+      }
+    }
     req.session.lastOrderId = order._id;
     await new Promise((resolve, reject) => { req.session.save((err) => (err ? reject(err) : resolve())); });
 
