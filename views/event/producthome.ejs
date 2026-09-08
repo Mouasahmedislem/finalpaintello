@@ -2480,21 +2480,6 @@ input:focus, select:focus, textarea:focus {
             <div class="text-2xl font-bold" style="color:var(--accent)"><%= producthome && typeof producthome.price !== 'undefined' ? Number(producthome.price).toFixed(2) : '' %> DA</div>
           </div>
 
-          <!-- Luxury Material Finish Swatches -->
-          <div class="mt-6 pt-6 border-t border-gray-100">
-            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 block mb-3">Finition Artisanale</span>
-            <div class="flex items-center gap-3" id="finishSwatches">
-              <button type="button" data-finish="Ceramic Matte" class="finish-swatch active px-3 py-1.5 text-xs font-medium border border-black rounded-full bg-slate-900 text-white transition-all flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-slate-200 inline-block"></span> Ceramique Mate
-              </button>
-              <button type="button" data-finish="Terracotta" class="finish-swatch px-3 py-1.5 text-xs font-medium border border-gray-200 rounded-full bg-white text-gray-700 hover:border-gray-400 transition-all flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-amber-700 inline-block"></span> Terre Cuite
-              </button>
-              <button type="button" data-finish="Sandstone" class="finish-swatch px-3 py-1.5 text-xs font-medium border border-gray-200 rounded-full bg-white text-gray-700 hover:border-gray-400 transition-all flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-amber-200 inline-block"></span> Grès Sable
-              </button>
-            </div>
-          </div>
 
           <!-- Room Visualizer Simulation Button -->
           <div class="mt-4">
@@ -3774,9 +3759,6 @@ if (addForm) {
     try {
       if (window.fbq) {
         const serverEventId = '<%= metaEventIdCart %>';
-        const activeSwatch = document.querySelector('.finish-swatch.active');
-        const selectedFinish = activeSwatch ? activeSwatch.getAttribute('data-finish') : 'Ceramic Matte';
-
         window.fbq('track', 'AddToCart', {
           content_name: <%- JSON.stringify(producthome.title) %>,
           content_ids: secondProductId
@@ -3785,13 +3767,12 @@ if (addForm) {
           content_type: 'product',
           value: totalValue,
           currency: 'DZD',
-          contents: contents,
-          finish: selectedFinish
+          contents: contents
         }, {
           eventID: serverEventId
         });
 
-        console.log('🎯 AddToCart Event ID:', serverEventId, 'Finish:', selectedFinish);
+        console.log('🎯 AddToCart Event ID:', serverEventId);
       }
     } catch (err) {
       console.warn('fbq AddToCart failed', err);
@@ -4553,20 +4534,36 @@ document.addEventListener('DOMContentLoaded', function() {
   <div class="bg-white rounded-2xl max-w-3xl w-full p-6 space-y-4 relative shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
     <div class="flex items-center justify-between border-b border-gray-100 pb-3">
       <div>
-        <h3 class="text-base font-bold text-slate-900 uppercase">Visualisez Chez Vous</h3>
-        <p class="text-xs text-slate-500">Importez une photo de votre salon, cuisine ou chambre pour ajuster le vase en direct.</p>
+        <h3 class="text-base font-bold text-slate-900 uppercase flex items-center gap-2">
+          <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i> Simulation Dans Votre Intérieur
+        </h3>
+        <p class="text-xs text-slate-500">Prenez en photo votre pièce (salon, chambre, cuisine) ou sélectionnez une pièce exemple ci-dessous.</p>
       </div>
       <button type="button" id="closeRoomModalBtn" class="text-slate-400 hover:text-slate-900 text-xl font-bold p-1">&times;</button>
     </div>
 
+    <!-- Room Presets Bar -->
+    <div class="flex items-center gap-2 text-xs overflow-x-auto pb-1 border-b border-gray-100">
+      <span class="font-semibold text-slate-400 uppercase text-[10px] whitespace-nowrap">Exemples de Pièces:</span>
+      <button type="button" data-room-preset="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1000&q=80" class="room-preset-btn px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full font-medium whitespace-nowrap transition">
+        Salon Lumineux
+      </button>
+      <button type="button" data-room-preset="https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=1000&q=80" class="room-preset-btn px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full font-medium whitespace-nowrap transition">
+        Cuisine & Table
+      </button>
+      <button type="button" data-room-preset="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=1000&q=80" class="room-preset-btn px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full font-medium whitespace-nowrap transition">
+        Chambre Cocooning
+      </button>
+    </div>
+
     <!-- Canvas Workspace -->
-    <div class="relative flex-1 bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center min-h-[300px]" id="roomCanvasContainer">
-      <canvas id="roomCanvas" class="max-w-full max-h-[500px] rounded object-contain"></canvas>
+    <div class="relative flex-1 bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center min-h-[320px]" id="roomCanvasContainer">
+      <canvas id="roomCanvas" class="max-w-full max-h-[500px] rounded object-contain cursor-move"></canvas>
       <div id="roomUploadPrompt" class="text-center p-6 space-y-3">
-        <i class="fa-solid fa-cloud-arrow-up text-4xl text-slate-400"></i>
-        <p class="text-xs text-slate-600">Prenez ou importez une photo de votre pièce</p>
-        <label class="inline-block px-4 py-2 bg-slate-900 text-white text-xs font-semibold uppercase tracking-wider rounded-lg cursor-pointer hover:bg-slate-800 transition">
-          Importer une Photo
+        <i class="fa-solid fa-camera-retro text-4xl text-slate-400"></i>
+        <p class="text-xs text-slate-600 font-medium">Prenez une photo de votre maison ou choisissez un exemple ci-dessus</p>
+        <label class="inline-block px-5 py-2.5 bg-slate-900 text-white text-xs font-semibold uppercase tracking-wider rounded-lg cursor-pointer hover:bg-slate-800 transition shadow-sm">
+          <i class="fa-solid fa-upload mr-1.5"></i> Importer Votre Photo
           <input type="file" id="roomImageInput" accept="image/*" class="hidden">
         </label>
       </div>
@@ -4583,7 +4580,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <input type="range" id="vaseRotateInput" min="-180" max="180" step="5" value="0" class="w-24 accent-slate-900">
       </div>
       <label class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold rounded cursor-pointer transition">
-        Changer Photo
+        <i class="fa-solid fa-image mr-1"></i> Changer Photo
         <input type="file" id="roomImageInputAlt" accept="image/*" class="hidden">
       </label>
     </div>
@@ -4615,17 +4612,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // Finish Swatch Interaction
-  document.querySelectorAll('.finish-swatch').forEach(btn => {
-    btn.addEventListener('click', function() {
-      document.querySelectorAll('.finish-swatch').forEach(b => {
-        b.classList.remove('active', 'bg-slate-900', 'text-white', 'border-black');
-        b.classList.add('bg-white', 'text-gray-700', 'border-gray-200');
-      });
-      this.classList.add('active', 'bg-slate-900', 'text-white', 'border-black');
-      this.classList.remove('bg-white', 'text-gray-700', 'border-gray-200');
-    });
-  });
 
   // Room Visualizer Canvas Logic
   document.addEventListener('DOMContentLoaded', function() {
@@ -4656,6 +4642,25 @@ document.addEventListener('DOMContentLoaded', function() {
     if (closeBtn) {
       closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
     }
+
+    // Room presets click listeners
+    document.querySelectorAll('.room-preset-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const url = this.getAttribute('data-room-preset');
+        if (!url) return;
+        roomImg = new Image();
+        roomImg.crossOrigin = 'anonymous';
+        roomImg.onload = function() {
+          canvas.width = roomImg.width;
+          canvas.height = roomImg.height;
+          vaseX = canvas.width / 2;
+          vaseY = canvas.height / 1.5;
+          if (prompt) prompt.classList.add('hidden');
+          draw();
+        };
+        roomImg.src = url;
+      });
+    });
 
     function handleFile(e) {
       const file = e.target.files[0];
