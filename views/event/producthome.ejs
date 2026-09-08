@@ -56,6 +56,18 @@ setTimeout(function() {
     console.log('🎯 ViewContent Event ID:', serverEventId);
   }
 }, 2000);
+
+  // GA4 DataLayer view_item Push (Matching GTM variables: currency, price, productId, productName)
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push({
+    event: 'view_item',
+    currency: 'DZD',
+    price: <%= producthome.price %>,
+    productId: '<%= producthome._id %>',
+    productName: <%- JSON.stringify(producthome.title) %>,
+    item_id: '<%= producthome._id %>',
+    item_name: <%- JSON.stringify(producthome.title) %>
+  });
   </script>
   <noscript>
     <img height="1" width="1" style="display:none" 
@@ -3703,6 +3715,25 @@ if (addForm) {
       console.warn('fbq AddToCart failed', err);
     }
 
+    // Push GA4 add_to_cart event to window.dataLayer (matching GTM tag parameters)
+    try {
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({
+        event: 'add_to_cart',
+        currency: 'DZD',
+        value: totalValue,
+        productPrice: mainPrice,
+        price: mainPrice,
+        productId: mainProductId,
+        item_id: mainProductId,
+        productName: <%- JSON.stringify(producthome.title) %>,
+        item_name: <%- JSON.stringify(producthome.title) %>,
+        quantity: mainQty
+      });
+    } catch(e) {
+      console.warn('dataLayer add_to_cart push failed', e);
+    }
+
     // REDIRECT (SEND MAIN QTY + SECOND PRODUCT)
     let redirectUrl = `/add-to-cart-producthome/${mainProductId}?qty=${mainQty}`;
 
@@ -3774,6 +3805,21 @@ if (buyNowBtn) {
 
         console.log('🎯 BuyNow AddToCart Event ID:', serverEventIdCart);
       }
+
+      // Push GA4 add_to_cart event for Buy Now
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({
+        event: 'add_to_cart',
+        currency: 'DZD',
+        value: totalValue,
+        productPrice: mainPrice,
+        price: mainPrice,
+        productId: mainProductId,
+        item_id: mainProductId,
+        productName: <%- JSON.stringify(producthome.title) %>,
+        item_name: <%- JSON.stringify(producthome.title) %>,
+        quantity: mainQty
+      });
 
       let redirectUrl = `/add-to-cart-producthome/${mainProductId}?qty=${mainQty}&redirect=checkout`;
 
