@@ -196,19 +196,22 @@
     <div class="flex flex-wrap items-center gap-3 mt-4 md:mt-0">
         <% if (user && user.isAdmin) { %>
         <a href="/user/admin/orders" class="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-white bg-black hover:opacity-80 transition shadow">
-            <i class="fa-solid fa-boxes-packing mr-2"></i>Commandes Admin
+            <i class="fa-solid fa-boxes-packing mr-2"></i>Commandes
+        </a>
+        <a href="/user/admin/coupons" class="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition">
+            <i class="fa-solid fa-ticket mr-2"></i>Codes Promo
         </a>
         <a href="/user/admin/finance" class="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition">
             <i class="fa-solid fa-chart-line mr-2"></i>Finance & Profit
         </a>
         <a href="/user/admin/products/new" class="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition">
-            <i class="fa-solid fa-plus mr-2"></i>New Product
+            <i class="fa-solid fa-plus mr-2"></i>Nouveau Produit
         </a>
         <a href="/user/admin/whatsapp" class="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition">
             <i class="fa-brands fa-whatsapp mr-2"></i>WhatsApp
         </a>
         <a href="/user/admin/reviews" class="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition">
-            <i class="fa-solid fa-star mr-2"></i>Reviews
+            <i class="fa-solid fa-star mr-2"></i>Avis
         </a>
         <% } %>
         <a href="/user/logout" class="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition">
