@@ -13,6 +13,7 @@ const WhatsAppMessage = require('../models/whatsappMessage');
 const Review = require('../models/review');
 const Producthome = require('../models/producthome');
 const Paintello = require('../models/paintello');
+const Coupon = require('../models/coupon');
 const axios = require('axios');
 
 // protect routes using csrf
@@ -378,6 +379,60 @@ router.post('/admin/orders/:id/status', middleware.isLoggedIn, requireAdmin, asy
     console.error('❌ Update order status error:', err);
     req.flash('error', 'Erreur lors de la mise à jour de la commande.');
     res.redirect('/user/admin/orders');
+  }
+});
+
+// ===================== COUPON MANAGEMENT =====================
+router.get('/admin/coupons', middleware.isLoggedIn, requireAdmin, async (req, res) => {
+  try {
+    const coupons = await Coupon.find({}).sort({ createdAt: -1 }).lean();
+    res.render('admin/coupons', {
+      coupons,
+      csrfToken: req.csrfToken(),
+      flashErrors: req.flash('error'),
+      user: req.user
+    });
+  } catch (err) {
+    console.error('❌ Coupon list error:', err);
+    res.status(500).send('Server Error');
+  }
+});
+
+router.post('/admin/coupons', middleware.isLoggedIn, requireAdmin, async (req, res) => {
+  try {
+    const { code, discountType, discountValue, minOrderAmount, expirationDate } = req.body;
+    if (!code || !discountValue) {
+      req.flash('error', 'Le code et la valeur de réduction sont obligatoires.');
+      return res.redirect('/user/admin/coupons');
+    }
+
+    await Coupon.create({
+      code: code.trim().toUpperCase(),
+      discountType: discountType || 'percent',
+      discountValue: parseFloat(discountValue) || 0,
+      minOrderAmount: parseFloat(minOrderAmount) || 0,
+      expirationDate: expirationDate ? new Date(expirationDate) : null
+    });
+
+    res.redirect('/user/admin/coupons');
+  } catch (err) {
+    console.error('❌ Coupon create error:', err);
+    req.flash('error', 'Erreur lors de la création du code promo (code peut-être déjà existant).');
+    res.redirect('/user/admin/coupons');
+  }
+});
+
+router.post('/admin/coupons/:id/toggle', middleware.isLoggedIn, requireAdmin, async (req, res) => {
+  try {
+    const coupon = await Coupon.findById(req.params.id);
+    if (coupon) {
+      coupon.active = !coupon.active;
+      await coupon.save();
+    }
+    res.redirect('/user/admin/coupons');
+  } catch (err) {
+    console.error('❌ Coupon toggle error:', err);
+    res.redirect('/user/admin/coupons');
   }
 });
 

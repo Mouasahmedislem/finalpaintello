@@ -18,6 +18,7 @@ const twilio = require('twilio');
 const Notification = require('../models/notification');
 const Producthome = require('../models/producthome');
 const Paintello = require('../models/paintello');
+const Coupon = require('../models/coupon');
 const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 const Order = require('../models/order');
 const WhatsAppMessage = require('../models/whatsappMessage');
@@ -703,8 +704,29 @@ router.post("/checkout", async (req, res) => {
 
   const cityNormalised = (city || "").toLowerCase().trim();
   const shippingInfo = wilayaShippingInfo[cityNormalised] || { fee: 1000, delay: "3-5 jours" };
-  const shippingFee = cart.totalPrice >= freeShippingThreshold ? 0 : shippingInfo.fee;
-  const finalTotalPrice = cart.totalPrice + shippingFee;
+  let shippingFee = cart.totalPrice >= freeShippingThreshold ? 0 : shippingInfo.fee;
+
+  // Process Coupon Code Discount if provided
+  const { couponCode } = req.body;
+  let couponDiscount = 0;
+  if (couponCode && couponCode.trim()) {
+    try {
+      const coupon = await Coupon.findOne({ code: couponCode.trim().toUpperCase(), active: true });
+      if (coupon && coupon.isValid(cart.totalPrice)) {
+        if (coupon.discountType === 'percent') {
+          couponDiscount = (cart.totalPrice * coupon.discountValue) / 100;
+        } else {
+          couponDiscount = Math.min(cart.totalPrice, coupon.discountValue);
+        }
+        coupon.usageCount = (coupon.usageCount || 0) + 1;
+        await coupon.save();
+      }
+    } catch(e) {
+      console.warn("Coupon process warning:", e.message);
+    }
+  }
+
+  const finalTotalPrice = Math.max(0, cart.totalPrice - couponDiscount + shippingFee);
 
   // 1. COD
   if (paymentMethod === "cod") {
@@ -1456,6 +1478,48 @@ router.post('/webhook', async (req,res) => {
     sendTelegramMessage(`💬 <b>Message WhatsApp</b>\n👤 De: ${name} (${numero})\n📝 Texte: ${text}`).catch((e)=>console.error('sendTelegramMessage error:', e.message));
     return res.sendStatus(200);
   }catch(err){ console.error(err); return res.sendStatus(500); }
+});
+
+router.post('/validate-coupon', async (req, res) => {
+  try {
+    const { code, cartTotal } = req.body;
+    if (!code) {
+      return res.status(400).json({ valid: false, message: 'Code promo requis.' });
+    }
+
+    const coupon = await Coupon.findOne({ code: code.trim().toUpperCase(), active: true });
+    if (!coupon) {
+      return res.status(404).json({ valid: false, message: 'Code promo invalide ou expiré.' });
+    }
+
+    const numericTotal = parseFloat(cartTotal) || 0;
+    if (!coupon.isValid(numericTotal)) {
+      if (coupon.minOrderAmount > numericTotal) {
+        return res.status(400).json({ valid: false, message: `Montant minimum de commande: ${coupon.minOrderAmount} DA.` });
+      }
+      return res.status(400).json({ valid: false, message: 'Code promo non applicable.' });
+    }
+
+    let discountAmount = 0;
+    if (coupon.discountType === 'percent') {
+      discountAmount = (numericTotal * coupon.discountValue) / 100;
+    } else {
+      discountAmount = Math.min(numericTotal, coupon.discountValue);
+    }
+
+    res.json({
+      valid: true,
+      code: coupon.code,
+      discountType: coupon.discountType,
+      discountValue: coupon.discountValue,
+      discountAmount: Number(discountAmount.toFixed(2)),
+      message: `Code promo ${coupon.code} appliqué !`
+    });
+
+  } catch (err) {
+    console.error('❌ Validate coupon error:', err);
+    res.status(500).json({ valid: false, message: 'Erreur lors de la vérification du code.' });
+  }
 });
 
 router.post('/notify-me/:productId', async (req,res) => {
