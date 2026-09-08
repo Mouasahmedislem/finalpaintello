@@ -5,6 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="facebook-domain-verification" content="yb7g1gekm0w90kxdm7yjazn8df8ad0" />
+
+  <!-- Meta OpenGraph Product Microdata for Catalog & Ads -->
+  <meta property="og:type" content="product" />
+  <meta property="og:title" content="<%= producthome && producthome.title ? producthome.title : 'Paintello Home Product' %>" />
+  <meta property="og:description" content="<%= producthome && (producthome.description || producthome.subtitle) ? (producthome.description || producthome.subtitle) : 'Paintello Home Decor' %>" />
+  <meta property="og:image" content="<%= producthome && producthome.image && producthome.image[0] ? producthome.image[0] : '/img/placeholder.png' %>" />
+  <meta property="product:price:amount" content="<%= producthome && typeof producthome.price !== 'undefined' ? producthome.price : 0 %>" />
+  <meta property="product:price:currency" content="DZD" />
+  <meta property="og:availability" content="<%= producthome && (typeof producthome.stock !== 'undefined' ? producthome.stock > 0 : producthome.disponible !== false) ? 'instock' : 'oos' %>" />
    <!-- ✅ META PIXEL - APRÈS le script FBP -->
   <% if (process.env.FB_PIXEL_ID) { %>
   <!-- Facebook Pixel Code -->

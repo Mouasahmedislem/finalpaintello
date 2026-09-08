@@ -1471,6 +1471,91 @@ router.post('/notify-me/:productId', async (req,res) => {
   }catch(e){ console.error(e); res.status(500).json({success:false,message:'Erreur serveur'}); }
 });
 
+// Meta Advantage+ Catalog Dynamic XML Product Feed
+router.get(['/catalog.xml', '/feed/facebook.xml'], async (req, res) => {
+  try {
+    const host = req.get('host') || 'paintello.uk';
+    const baseUrl = `https://${host}`;
 
+    const [homeProducts, paintelloProducts] = await Promise.all([
+      Producthome.find({}).lean(),
+      Paintello.find({}).lean()
+    ]);
+
+    function escapeXml(unsafe) {
+      return (unsafe || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+    }
+
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
+  <channel>
+    <title>Paintello Home Catalog Feed</title>
+    <link>${baseUrl}</link>
+    <description>Meta Advantage+ XML Product Catalog Feed for Paintello</description>
+`;
+
+    homeProducts.forEach(p => {
+      const pId = p._id.toString();
+      const title = escapeXml(p.title || 'Paintello Product');
+      const description = escapeXml(p.description || p.subtitle || p.title);
+      const link = `${baseUrl}/producthome/${pId}`;
+      const img = p.image && p.image[0] ? (p.image[0].startsWith('http') ? p.image[0] : `${baseUrl}${p.image[0]}`) : `${baseUrl}/img/placeholder.png`;
+      const price = `${Number(p.price || 0).toFixed(2)} DZD`;
+      const inStock = typeof p.stock !== 'undefined' ? p.stock > 0 : (p.disponible !== false);
+      const availability = inStock ? 'in stock' : 'out of stock';
+
+      xml += `    <item>
+      <g:id>${pId}</g:id>
+      <g:title>${title}</g:title>
+      <g:description>${description}</g:description>
+      <g:link>${escapeXml(link)}</g:link>
+      <g:image_link>${escapeXml(img)}</g:image_link>
+      <g:brand>Paintello</g:brand>
+      <g:condition>new</g:condition>
+      <g:availability>${availability}</g:availability>
+      <g:price>${price}</g:price>
+      <g:google_product_category>Home &amp; Garden &gt; Decor</g:google_product_category>
+    </item>\n`;
+    });
+
+    paintelloProducts.forEach(p => {
+      const pId = p._id.toString();
+      const title = escapeXml(p.title || 'Paintello Art');
+      const description = escapeXml(p.title);
+      const link = p.href ? (p.href.startsWith('http') ? p.href : `${baseUrl}${p.href}`) : `${baseUrl}/producthome/${pId}`;
+      const img = p.image && p.image[0] ? (p.image[0].startsWith('http') ? p.image[0] : `${baseUrl}${p.image[0]}`) : `${baseUrl}/img/placeholder.png`;
+      const price = `${Number(p.price || 0).toFixed(2)} DZD`;
+      const inStock = typeof p.stock !== 'undefined' ? p.stock > 0 : (p.disponible !== false);
+      const availability = inStock ? 'in stock' : 'out of stock';
+
+      xml += `    <item>
+      <g:id>${pId}</g:id>
+      <g:title>${title}</g:title>
+      <g:description>${description}</g:description>
+      <g:link>${escapeXml(link)}</g:link>
+      <g:image_link>${escapeXml(img)}</g:image_link>
+      <g:brand>Paintello</g:brand>
+      <g:condition>new</g:condition>
+      <g:availability>${availability}</g:availability>
+      <g:price>${price}</g:price>
+      <g:google_product_category>Home &amp; Garden &gt; Decor</g:google_product_category>
+    </item>\n`;
+    });
+
+    xml += `  </channel>\n</rss>`;
+
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.send(xml);
+
+  } catch (err) {
+    console.error('❌ Catalog Feed error:', err);
+    res.status(500).send('Catalog Error');
+  }
+});
 
 module.exports = router;
