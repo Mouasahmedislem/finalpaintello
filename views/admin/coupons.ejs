@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gestion des Coupons - Admin Panel</title>
+
+  <!-- Tailwind CSS & FontAwesome -->
+  <link rel="stylesheet" href="/css/tailwind-output.css">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+  </style>
+</head>
+<body class="p-4 sm:p-6 lg:p-8">
+  <div class="max-w-7xl mx-auto space-y-8">
+
+    <!-- Header Navigation -->
+    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-amber-800 bg-amber-100 rounded-full">
+            <i class="fa-solid fa-ticket mr-1"></i> Promo & Discounts
+          </span>
+          <span class="text-xs text-slate-400">• Dynamic Coupon Engine</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-light tracking-tight text-slate-900 uppercase mt-1">Codes Promo & Réductions</h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          Créez et gérez vos codes de réduction (ex: <strong class="text-slate-800">SUMMER10</strong>, <strong class="text-slate-800">PAINTELLO15</strong>).
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <a href="/user/admin/orders" class="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition">
+          <i class="fa-solid fa-boxes-packing mr-1.5"></i> Commandes
+        </a>
+        <a href="/user/admin/finance" class="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition">
+          <i class="fa-solid fa-chart-line mr-1.5"></i> Finance
+        </a>
+        <a href="/user/profile" class="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition">
+          <i class="fa-solid fa-arrow-left mr-1.5"></i> Profil
+        </a>
+      </div>
+    </div>
+
+    <!-- Flash Messages -->
+    <% if (flashErrors && flashErrors.length > 0) { %>
+      <div class="bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
+        <i class="fa-solid fa-triangle-exclamation text-rose-500"></i>
+        <span><%= flashErrors[0] %></span>
+      </div>
+    <% } %>
+
+    <!-- Create Coupon Form -->
+    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+      <h3 class="text-base font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2">
+        <i class="fa-solid fa-plus text-amber-600"></i> Créer un Nouveau Code Promo
+      </h3>
+
+      <form action="/user/admin/coupons" method="POST" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Code Promo *</label>
+          <input type="text" name="code" required placeholder="EX: SUMMER10" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg uppercase focus:outline-none focus:ring-1 focus:ring-slate-900">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Type de Réduction</label>
+          <select name="discountType" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-900 bg-white">
+            <option value="percent">Pourcentage (%)</option>
+            <option value="fixed">Montant Fixe (DA)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Valeur *</label>
+          <input type="number" step="0.01" min="0" name="discountValue" required placeholder="10" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-900">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Montant Min. Commande (DA)</label>
+          <input type="number" min="0" name="minOrderAmount" placeholder="0" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-900">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 uppercase mb-1">Date d'Expiration</label>
+          <input type="date" name="expirationDate" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-900 bg-white">
+        </div>
+
+        <div>
+          <button type="submit" class="w-full py-2 bg-slate-900 text-white text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-slate-800 transition shadow">
+            <i class="fa-solid fa-floppy-disk mr-1"></i> Créer Code
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Coupons List Table -->
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="p-6 border-b border-slate-200 flex items-center justify-between">
+        <h3 class="text-base font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2">
+          <i class="fa-solid fa-list text-indigo-600"></i> Codes Promo Actifs (<%= coupons.length %>)
+        </h3>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-sm">
+          <thead>
+            <tr class="bg-slate-50 border-b border-slate-200 text-xs text-slate-500 uppercase tracking-wider">
+              <th class="py-3 px-6 font-semibold">Code</th>
+              <th class="py-3 px-6 font-semibold">Réduction</th>
+              <th class="py-3 px-6 font-semibold">Commande Min.</th>
+              <th class="py-3 px-6 font-semibold">Expiration</th>
+              <th class="py-3 px-6 font-semibold text-center">Utilisations</th>
+              <th class="py-3 px-6 font-semibold text-center">Statut</th>
+              <th class="py-3 px-6 font-semibold text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            <% if (coupons.length === 0) { %>
+              <tr>
+                <td colspan="7" class="py-8 text-center text-xs text-slate-400 italic">Aucun code promo créé pour le moment.</td>
+              </tr>
+            <% } else { %>
+              <% coupons.forEach(coupon => { %>
+                <tr class="hover:bg-slate-50 transition">
+                  <td class="py-3 px-6 font-bold text-slate-900 uppercase tracking-wider">
+                    <span class="px-2.5 py-1 bg-amber-100 text-amber-900 rounded font-mono text-xs">
+                      <%= coupon.code %>
+                    </span>
+                  </td>
+                  <td class="py-3 px-6 font-semibold text-emerald-600">
+                    <%= coupon.discountType === 'percent' ? coupon.discountValue + ' %' : coupon.discountValue + ' DA' %>
+                  </td>
+                  <td class="py-3 px-6 text-slate-600 text-xs">
+                    <%= coupon.minOrderAmount ? coupon.minOrderAmount + ' DA' : 'Aucun' %>
+                  </td>
+                  <td class="py-3 px-6 text-slate-500 text-xs">
+                    <%= coupon.expirationDate ? new Date(coupon.expirationDate).toLocaleDateString('fr-FR') : 'Permanente' %>
+                  </td>
+                  <td class="py-3 px-6 text-center font-bold text-slate-700">
+                    <%= coupon.usageCount || 0 %>
+                  </td>
+                  <td class="py-3 px-6 text-center">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase <%= coupon.active ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800' %>">
+                      <%= coupon.active ? 'Actif' : 'Désactivé' %>
+                    </span>
+                  </td>
+                  <td class="py-3 px-6 text-right">
+                    <form action="/user/admin/coupons/<%= coupon._id %>/toggle" method="POST" class="inline-block">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                      <button type="submit" class="px-3 py-1 text-xs font-semibold rounded border <%= coupon.active ? 'border-amber-300 text-amber-700 hover:bg-amber-50' : 'border-emerald-300 text-emerald-700 hover:bg-emerald-50' %>">
+                        <%= coupon.active ? 'Désactiver' : 'Activer' %>
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

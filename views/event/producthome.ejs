@@ -14,6 +14,34 @@
   <meta property="product:price:amount" content="<%= producthome && typeof producthome.price !== 'undefined' ? producthome.price : 0 %>" />
   <meta property="product:price:currency" content="DZD" />
   <meta property="og:availability" content="<%= producthome && (typeof producthome.stock !== 'undefined' ? producthome.stock > 0 : producthome.disponible !== false) ? 'instock' : 'oos' %>" />
+
+  <!-- Schema.org JSON-LD Structured Data for Google Rich Results -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org/",
+    "@type": "Product",
+    "name": <%- JSON.stringify(producthome && producthome.title ? producthome.title : "Paintello Product") %>,
+    "image": <%- JSON.stringify(producthome && producthome.image && producthome.image[0] ? producthome.image[0] : "/img/placeholder.png") %>,
+    "description": <%- JSON.stringify(producthome && (producthome.description || producthome.subtitle) ? (producthome.description || producthome.subtitle) : "Handcrafted Paintello Home product") %>,
+    "brand": {
+      "@type": "Brand",
+      "name": "Paintello"
+    },
+    "offers": {
+      "@type": "Offer",
+      "url": "https://www.paintello.uk/producthome/<%= producthome._id %>",
+      "priceCurrency": "DZD",
+      "price": "<%= producthome && typeof producthome.price !== 'undefined' ? producthome.price : 0 %>",
+      "availability": "https://schema.org/<%= producthome && (typeof producthome.stock !== 'undefined' ? producthome.stock > 0 : producthome.disponible !== false) ? 'InStock' : 'OutOfStock' %>",
+      "itemCondition": "https://schema.org/NewCondition"
+    }<% if (avgRating && avgRating > 0 && reviews && reviews.length > 0) { %>,
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "<%= avgRating.toFixed(1) %>",
+      "reviewCount": "<%= reviews.length %>"
+    }<% } %>
+  }
+  </script>
    <!-- ✅ META PIXEL - APRÈS le script FBP -->
   <% if (process.env.FB_PIXEL_ID) { %>
   <!-- Facebook Pixel Code -->
