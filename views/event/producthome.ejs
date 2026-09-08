@@ -468,6 +468,15 @@ body {
     
     /* Avoid layout shift for 3D viewer canvas */
     .model-viewer-container { min-height: 380px; }
+    .model-viewer-container.mobile-fullscreen-active {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 99999 !important;
+      background: #f8f9fa !important;
+    }
     
     /* Enhanced Lightbox Styles */
     .lightbox-backdrop { 
@@ -3197,18 +3206,27 @@ input:focus, select:focus, textarea:focus {
           });
         }
 
-        // Fullscreen 3D model viewer overlay
+        // Fullscreen 3D model viewer overlay (Cross-platform for PC & Mobile Safari/Android)
         const fsBtn = document.getElementById('fullscreen3DBtn');
         const modelContainer = document.getElementById('modelViewer');
         if (fsBtn && modelContainer) {
           fsBtn.addEventListener('click', function() {
-            if (modelContainer.requestFullscreen) {
-              modelContainer.requestFullscreen();
-            } else if (modelContainer.webkitRequestFullscreen) {
-              modelContainer.webkitRequestFullscreen();
-            } else if (modelContainer.msRequestFullscreen) {
-              modelContainer.msRequestFullscreen();
+            const isFullscreen = modelContainer.classList.contains('mobile-fullscreen-active');
+            if (isFullscreen) {
+              modelContainer.classList.remove('mobile-fullscreen-active');
+              if (document.exitFullscreen) document.exitFullscreen().catch(()=>{});
+            } else {
+              if (modelContainer.requestFullscreen) {
+                modelContainer.requestFullscreen().catch(() => {
+                  modelContainer.classList.add('mobile-fullscreen-active');
+                });
+              } else if (modelContainer.webkitRequestFullscreen) {
+                modelContainer.webkitRequestFullscreen();
+              } else {
+                modelContainer.classList.add('mobile-fullscreen-active');
+              }
             }
+            setTimeout(() => window.dispatchEvent(new Event('resize')), 150);
           });
         }
       });
@@ -4675,6 +4693,12 @@ document.addEventListener('DOMContentLoaded', function() {
         ctx.save();
         ctx.translate(vaseX, vaseY);
         ctx.rotate(rotate);
+
+        // Crop padding / apply rounded cutout for clean vase integration
+        ctx.beginPath();
+        ctx.ellipse(0, 0, vWidth * 0.48, vHeight * 0.48, 0, 0, 2 * Math.PI);
+        ctx.clip();
+
         ctx.drawImage(vaseImg, -vWidth / 2, -vHeight / 2, vWidth, vHeight);
         ctx.restore();
       }
