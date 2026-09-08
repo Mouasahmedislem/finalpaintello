@@ -56,6 +56,18 @@ setTimeout(function() {
     console.log('🎯 ViewContent Event ID:', serverEventId);
   }
 }, 2000);
+
+  // GA4 DataLayer view_item Push (Matching GTM variables: currency, price, productId, productName)
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push({
+    event: 'view_item',
+    currency: 'DZD',
+    price: <%= producthome.price %>,
+    productId: '<%= producthome._id %>',
+    productName: <%- JSON.stringify(producthome.title) %>,
+    item_id: '<%= producthome._id %>',
+    item_name: <%- JSON.stringify(producthome.title) %>
+  });
   </script>
   <noscript>
     <img height="1" width="1" style="display:none" 
@@ -2421,6 +2433,22 @@ input:focus, select:focus, textarea:focus {
             <% } %>
             <div class="text-2xl font-bold" style="color:var(--accent)"><%= producthome && typeof producthome.price !== 'undefined' ? Number(producthome.price).toFixed(2) : '' %> DA</div>
           </div>
+
+          <!-- Luxury Material Finish Swatches -->
+          <div class="mt-6 pt-6 border-t border-gray-100">
+            <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 block mb-3">Finition Artisanale</span>
+            <div class="flex items-center gap-3" id="finishSwatches">
+              <button type="button" data-finish="Ceramic Matte" class="finish-swatch active px-3 py-1.5 text-xs font-medium border border-black rounded-full bg-slate-900 text-white transition-all flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-slate-200 inline-block"></span> Ceramique Mate
+              </button>
+              <button type="button" data-finish="Terracotta" class="finish-swatch px-3 py-1.5 text-xs font-medium border border-gray-200 rounded-full bg-white text-gray-700 hover:border-gray-400 transition-all flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-700 inline-block"></span> Terre Cuite
+              </button>
+              <button type="button" data-finish="Sandstone" class="finish-swatch px-3 py-1.5 text-xs font-medium border border-gray-200 rounded-full bg-white text-gray-700 hover:border-gray-400 transition-all flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-200 inline-block"></span> Grès Sable
+              </button>
+            </div>
+          </div>
 <% if (relatedProducts && relatedProducts.length) { %>
 
 <section class="second-item-offer">
@@ -3664,6 +3692,8 @@ if (addForm) {
     try {
       if (window.fbq) {
         const serverEventId = '<%= metaEventIdCart %>';
+        const activeSwatch = document.querySelector('.finish-swatch.active');
+        const selectedFinish = activeSwatch ? activeSwatch.getAttribute('data-finish') : 'Ceramic Matte';
 
         window.fbq('track', 'AddToCart', {
           content_name: <%- JSON.stringify(producthome.title) %>,
@@ -3673,15 +3703,35 @@ if (addForm) {
           content_type: 'product',
           value: totalValue,
           currency: 'DZD',
-          contents: contents
+          contents: contents,
+          finish: selectedFinish
         }, {
           eventID: serverEventId
         });
 
-        console.log('🎯 AddToCart Event ID:', serverEventId);
+        console.log('🎯 AddToCart Event ID:', serverEventId, 'Finish:', selectedFinish);
       }
     } catch (err) {
       console.warn('fbq AddToCart failed', err);
+    }
+
+    // Push GA4 add_to_cart event to window.dataLayer (matching GTM tag parameters)
+    try {
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({
+        event: 'add_to_cart',
+        currency: 'DZD',
+        value: totalValue,
+        productPrice: mainPrice,
+        price: mainPrice,
+        productId: mainProductId,
+        item_id: mainProductId,
+        productName: <%- JSON.stringify(producthome.title) %>,
+        item_name: <%- JSON.stringify(producthome.title) %>,
+        quantity: mainQty
+      });
+    } catch(e) {
+      console.warn('dataLayer add_to_cart push failed', e);
     }
 
     // REDIRECT (SEND MAIN QTY + SECOND PRODUCT)
@@ -3755,6 +3805,21 @@ if (buyNowBtn) {
 
         console.log('🎯 BuyNow AddToCart Event ID:', serverEventIdCart);
       }
+
+      // Push GA4 add_to_cart event for Buy Now
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({
+        event: 'add_to_cart',
+        currency: 'DZD',
+        value: totalValue,
+        productPrice: mainPrice,
+        price: mainPrice,
+        productId: mainProductId,
+        item_id: mainProductId,
+        productName: <%- JSON.stringify(producthome.title) %>,
+        item_name: <%- JSON.stringify(producthome.title) %>,
+        quantity: mainQty
+      });
 
       let redirectUrl = `/add-to-cart-producthome/${mainProductId}?qty=${mainQty}&redirect=checkout`;
 
@@ -4401,6 +4466,43 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 </script>
 
+<!-- Minimalist Floating Purchase Bar -->
+<div id="minimalStickyBar" class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-slate-200 p-3 sm:p-4 z-40 transition-transform duration-300 translate-y-full flex items-center justify-between max-w-7xl mx-auto px-4 sm:px-8">
+  <div class="flex items-center gap-3">
+    <img src="<%= producthome && producthome.image && producthome.image[0] ? producthome.image[0] : '/img/placeholder.png' %>" alt="Product thumbnail" class="w-10 h-10 object-cover rounded-md border border-slate-200">
+    <div>
+      <h4 class="text-xs font-bold text-slate-900 line-clamp-1"><%= producthome && producthome.title ? producthome.title : 'Paintello Home' %></h4>
+      <p class="text-xs text-emerald-600 font-semibold"><%= producthome && typeof producthome.price !== 'undefined' ? Number(producthome.price).toFixed(2) : '0.00' %> DA</p>
+    </div>
+  </div>
+  <a href="/add-to-cart-producthome/<%= producthome._id %>?redirect=checkout" class="px-6 py-2.5 bg-slate-900 text-white text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-slate-800 transition shadow-sm">
+    Commander
+  </a>
+</div>
+
+<script>
+  // Show sticky bar on scroll
+  window.addEventListener('scroll', function() {
+    const bar = document.getElementById('minimalStickyBar');
+    if (window.scrollY > 400) {
+      bar.classList.remove('translate-y-full');
+    } else {
+      bar.classList.add('translate-y-full');
+    }
+  });
+
+  // Finish Swatch Interaction
+  document.querySelectorAll('.finish-swatch').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.finish-swatch').forEach(b => {
+        b.classList.remove('active', 'bg-slate-900', 'text-white', 'border-black');
+        b.classList.add('bg-white', 'text-gray-700', 'border-gray-200');
+      });
+      this.classList.add('active', 'bg-slate-900', 'text-white', 'border-black');
+      this.classList.remove('bg-white', 'text-gray-700', 'border-gray-200');
+    });
+  });
+</script>
 
 </body>
 </html>

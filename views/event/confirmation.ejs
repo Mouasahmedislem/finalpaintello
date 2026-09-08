@@ -400,25 +400,24 @@
 -->
 
 
-    <!-- GA4 Purchase Event (only for actual purchases, not COD) -->
-    <% if (typeof paymentMethod !== 'undefined' && paymentMethod === 'chargily') { %>
+    <!-- GA4 Purchase Event (Matching GTM tag variables: purchase_value, currency, items) -->
     <script>
         window.dataLayer = window.dataLayer || [];
         dataLayer.push({
             'event': 'purchase',
-            'value': <%= typeof value !== 'undefined' && value ? value : 0 %>,
-            'currency': <%- JSON.stringify(typeof currency !== 'undefined' ? currency : 'DZD') %>,
-            'items': <%- JSON.stringify((typeof contents !== 'undefined' ? contents : []).map(function(p) {
+            'purchase_value': <%= typeof value !== 'undefined' && value ? value : (typeof total !== 'undefined' ? total : 0) %>,
+            'value': <%= typeof value !== 'undefined' && value ? value : (typeof total !== 'undefined' ? total : 0) %>,
+            'currency': 'DZD',
+            'items': <%- JSON.stringify((typeof contents !== 'undefined' && Array.isArray(contents) ? contents : []).map(function(p) {
                 return {
-                    'item_id': p.id,
-                    'item_name': p.item_name || '',
-                    'price': p.item_price,
-                    'quantity': p.quantity
+                    'item_id': p.id || p.item_id || '',
+                    'item_name': p.item_name || p.title || 'Product',
+                    'price': p.item_price || p.price || 0,
+                    'quantity': p.quantity || p.qty || 1
                 };
             })) %>
         });
     </script>
-    <% } %>
 
     <script>
         // Newsletter popup functionality
