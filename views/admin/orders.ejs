@@ -86,9 +86,15 @@
         <% } %>
       </form>
 
-      <span class="text-xs text-slate-500 font-semibold whitespace-nowrap">
-        <%= orders.length %> commande(s) trouvée(s)
-      </span>
+      <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+        <span class="text-xs text-slate-500 font-semibold whitespace-nowrap">
+          <%= orders.length %> commande(s)
+        </span>
+        <a href="/user/admin/orders/export-csv?status=<%= statusFilter %>&search=<%= encodeURIComponent(searchFilter) %>"
+           class="px-4 py-2 bg-emerald-700 text-white text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-emerald-800 transition flex items-center gap-1.5 shadow-sm">
+          <i class="fa-solid fa-file-csv text-sm"></i> Exporter CSV (Yalidine)
+        </a>
+      </div>
     </div>
 
     <!-- Orders List -->
@@ -114,9 +120,19 @@
                     • <%= new Date(order.createdAt).toLocaleString('fr-FR') %>
                   </span>
                 </div>
-                <h3 class="text-base font-bold text-slate-800 mt-1">
-                  <%= order.firstName %> <%= order.lastName %>
-                  <span class="text-xs font-normal text-slate-500 mr-2">(<%= order.formattedPhone || order.numero %>)</span>
+                <h3 class="text-base font-bold text-slate-800 mt-1 flex items-center gap-2">
+                  <span><%= order.firstName %> <%= order.lastName %></span>
+                  <span class="text-xs font-normal text-slate-500">(<%= order.formattedPhone || order.numero %>)</span>
+
+                  <%
+                    const cleanPhone = (order.formattedPhone || order.numero || '').toString().replace(/\D/g, '');
+                    const waPhone = cleanPhone.startsWith('0') ? '213' + cleanPhone.substring(1) : (cleanPhone.startsWith('213') ? cleanPhone : '213' + cleanPhone);
+                    const waMsg = encodeURIComponent(`Bonjour ${order.firstName}, concernant votre commande Paintello #${order._id} d'un montant de ${order.totalWithShipping || 0} DA.`);
+                  %>
+                  <a href="https://wa.me/<%= waPhone %>?text=<%= waMsg %>" target="_blank" rel="noopener"
+                     class="px-2 py-0.5 text-[11px] font-semibold bg-emerald-100 text-emerald-800 rounded hover:bg-emerald-200 transition inline-flex items-center gap-1">
+                    <i class="fa-brands fa-whatsapp text-emerald-600"></i> WhatsApp
+                  </a>
                 </h3>
                 <p class="text-xs text-slate-500">
                   <i class="fa-solid fa-location-dot mr-1"></i> <%= order.address %>, <%= order.commune %>, <%= order.city %> (<%= order.country %>)

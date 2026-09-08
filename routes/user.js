@@ -298,6 +298,54 @@ router.get('/admin/orders', middleware.isLoggedIn, requireAdmin, async (req, res
   }
 });
 
+router.get('/admin/orders/export-csv', middleware.isLoggedIn, requireAdmin, async (req, res) => {
+  try {
+    const { status, search } = req.query;
+    let query = {};
+
+    if (status && ALLOWED_ORDER_STATUSES.includes(status)) {
+      query.status = status;
+    }
+
+    if (search && search.trim()) {
+      const searchRegex = new RegExp(search.trim(), 'i');
+      const numSearch = parseInt(search.trim().replace(/\D/g, ''), 10);
+      query.$or = [
+        { firstName: searchRegex },
+        { lastName: searchRegex },
+        { address: searchRegex },
+        { city: searchRegex },
+        { commune: searchRegex },
+        { trackingNumber: searchRegex }
+      ];
+      if (!isNaN(numSearch)) query.$or.push({ numero: numSearch });
+    }
+
+    const orders = await Order.find(query).sort({ createdAt: -1 }).lean();
+
+    // Generate CSV for Algerian Delivery Services (Yalidine / ZR Express)
+    let csv = 'Order_ID,Date,Nom,Prenom,Telephone,Wilaya,Commune,Adresse,Produits,Montant_Total_DZD,Statut,Tracking_Number\n';
+
+    orders.forEach(o => {
+      const cart = new Cart(o.cart || {});
+      const itemsList = cart.generateArray().map(i => `${i.qty}x ${i.item ? i.item.title : 'Produit'}`).join(' | ');
+      const phone = o.formattedPhone || o.numero || '';
+      const address = (o.address || '').replace(/"/g, '""');
+      const dateStr = new Date(o.createdAt).toISOString().split('T')[0];
+
+      csv += `"${o._id}","${dateStr}","${o.lastName || ''}","${o.firstName || ''}","${phone}","${o.city || ''}","${o.commune || ''}","${address}","${itemsList}","${o.totalWithShipping || 0}","${o.status || 'pending'}","${o.trackingNumber || ''}"\n`;
+    });
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename=commandes-paintello-${new Date().toISOString().split('T')[0]}.csv`);
+    res.send('\uFEFF' + csv); // UTF-8 BOM for Excel compatibility
+
+  } catch (err) {
+    console.error('❌ CSV export error:', err);
+    res.status(500).send('Export Error');
+  }
+});
+
 router.post('/admin/orders/:id/status', middleware.isLoggedIn, requireAdmin, async (req, res) => {
   try {
     const { status, trackingNumber, adminNotes } = req.body;
@@ -404,8 +452,23 @@ router.post('/admin/products/new', middleware.isLoggedIn, requireAdmin, async (r
 // ===================== FINANCE DASHBOARD (COD ALGERIA SPECIFIC) =====================
 router.get('/admin/finance', middleware.isLoggedIn, requireAdmin, async (req, res) => {
   try {
+    const { startDate, endDate } = req.query;
+    let orderQuery = {};
+
+    if (startDate || endDate) {
+      orderQuery.createdAt = {};
+      if (startDate) {
+        orderQuery.createdAt.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        const eDate = new Date(endDate);
+        eDate.setHours(23, 59, 59, 999);
+        orderQuery.createdAt.$lte = eDate;
+      }
+    }
+
     const [allOrders, paintelloProds, homeProds] = await Promise.all([
-      Order.find({}).sort({ createdAt: -1 }).lean(),
+      Order.find(orderQuery).sort({ createdAt: -1 }).lean(),
       Paintello.find({}).lean(),
       Producthome.find({}).lean()
     ]);
@@ -551,6 +614,8 @@ router.get('/admin/finance', middleware.isLoggedIn, requireAdmin, async (req, re
       products: allProducts,
       productSalesMap,
       productDeliveredSalesMap,
+      startDateFilter: startDate || '',
+      endDateFilter: endDate || '',
       csrfToken: req.csrfToken(),
       flashErrors: req.flash('error'),
       user: req.user
