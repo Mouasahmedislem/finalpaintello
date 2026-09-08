@@ -334,16 +334,16 @@
                     </div>
                   </td>
                   <td class="py-3 px-6">
-                    <div class="relative w-24">
-                      <input type="number" min="0" name="stock" value="<%= stockQty %>"
-                             class="w-full px-2 py-1 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-slate-900">
-                    </div>
-                  </td>
-                  <td class="py-3 px-6">
                     <div class="relative w-32">
                       <input type="number" step="0.01" min="0" name="sellPrice" value="<%= sellP %>"
                              class="w-full pl-2 pr-7 py-1 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-slate-900">
                       <span class="absolute right-2 top-1 text-[10px] text-slate-400 font-semibold">DA</span>
+                    </div>
+                  </td>
+                  <td class="py-3 px-6">
+                    <div class="relative w-24">
+                      <input type="number" min="0" name="stock" value="<%= stockQty %>"
+                             class="w-full px-2 py-1 text-xs border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-slate-900">
                     </div>
                   </td>
                   <td class="py-3 px-6 font-semibold text-xs <%= unitProfit >= 0 ? 'text-emerald-600' : 'text-rose-600' %>">
