@@ -315,6 +315,15 @@
                             <span><%= totalPrice %> DZD</span>
                         </div>
                     </div>
+
+                    <!-- PDF Invoice Download Button -->
+                    <% if (typeof orderId !== 'undefined' && orderId) { %>
+                        <div class="mt-6 pt-4 border-t border-gray-100 text-center">
+                            <a href="/order/invoice/<%= orderId %>" target="_blank" class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-black text-white text-xs uppercase tracking-wider font-semibold hover:bg-gray-800 transition rounded-lg shadow-sm">
+                                <i class="fas fa-file-invoice mr-1"></i> Télécharger la Facture (PDF)
+                            </a>
+                        </div>
+                    <% } %>
                 </div>
             </div>
 
@@ -440,10 +449,7 @@
             setTimeout(closePopup, 3000);
         }
 
-        // Auto-redirect to track page after 25 seconds
-        setTimeout(() => {
-            window.location.href = '/track-login';
-        }, 25000);
+        // Disabled auto-redirect to allow customer to review & download invoice
     </script>
 </body>
 </html>

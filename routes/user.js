@@ -282,8 +282,12 @@ router.get('/admin/orders', middleware.isLoggedIn, requireAdmin, async (req, res
 
     const orders = await Order.find(query).sort({ createdAt: -1 }).lean();
 
+    // Find pending/unconfirmed abandoned orders (created in last 7 days)
+    const abandonedOrders = orders.filter(o => o.status === 'pending' || o.status === 'on_hold');
+
     res.render('admin/orders', {
       orders,
+      abandonedOrders,
       statusFilter: status || 'all',
       searchFilter: search || '',
       allowedStatuses: ALLOWED_ORDER_STATUSES,
@@ -357,10 +361,36 @@ router.post('/admin/orders/:id/status', middleware.isLoggedIn, requireAdmin, asy
       return res.redirect('/user/admin/orders');
     }
 
+    const previousStatus = order.status;
     if (status && ALLOWED_ORDER_STATUSES.includes(status)) {
       order.status = status;
       if (status === 'delivered' && !order.actualDelivery) {
         order.actualDelivery = new Date();
+      }
+    }
+
+    if (status === 'delivered' && previousStatus !== 'delivered' && order.paymentMethod === 'cod') {
+      try {
+        const sendFacebookCAPIEvent = require('../services/facebookCapi');
+        await sendFacebookCAPIEvent({
+          eventName: 'Purchase',
+          eventId: 'cod-delivered-' + order._id,
+          userData: {
+            fn: order.firstName,
+            ln: order.lastName,
+            ph: order.numero,
+            ct: order.city
+          },
+          customData: {
+            content_type: 'product',
+            value: order.totalWithShipping || 0,
+            currency: 'DZD'
+          },
+          eventSourceUrl: `https://${req.get('host')}/order/deliver/${order._id}`
+        });
+        console.log(`🎯 COD Delivered CAPI Purchase Event Triggered for Order #${order._id}`);
+      } catch (capiErr) {
+        console.warn('❌ COD Delivered CAPI Purchase event failed:', capiErr.message);
       }
     }
 

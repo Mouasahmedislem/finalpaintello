@@ -765,6 +765,10 @@ router.post("/checkout", async (req, res) => {
               ph.stock = newStock;
               if (newStock <= 0) ph.disponible = false;
               await ph.save().catch(() => {});
+
+              if (newStock <= 3) {
+                sendTelegramMessage(`⚠️ <b>ALERTE STOCK FAIBLE</b>\n📦 Produit: ${ph.title}\n📉 Stock restant: <b>${newStock}</b> unités !`).catch(()=>{});
+              }
             }
             const pt = await Paintello.findById(productId);
             if (pt) {
@@ -773,6 +777,10 @@ router.post("/checkout", async (req, res) => {
               pt.stock = newStock;
               if (newStock <= 0) pt.disponible = false;
               await pt.save().catch(() => {});
+
+              if (newStock <= 3) {
+                sendTelegramMessage(`⚠️ <b>ALERTE STOCK FAIBLE</b>\n📦 Produit: ${pt.title}\n📉 Stock restant: <b>${newStock}</b> unités !`).catch(()=>{});
+              }
             }
           }
         }
@@ -1141,6 +1149,102 @@ router.get("/confirmation", async (req, res) => {
 });
 
 // GET /order/deliver/:orderId - Mark delivered + Send Purchase for COD
+// GET /order/invoice/:orderId - Printable Invoice HTML
+router.get("/order/invoice/:orderId", async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    if (!isValidObjectId(orderId)) return res.status(404).send("Commande introuvable");
+
+    const order = await Order.findById(orderId).lean();
+    if (!order) return res.status(404).send("Commande introuvable");
+
+    const cart = new Cart(order.cart || {});
+    const items = cart.generateArray();
+    const formattedDate = new Date(order.createdAt).toLocaleDateString('fr-FR', {
+      year: 'numeric', month: 'long', day: 'numeric'
+    });
+
+    res.send(`
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="utf-8">
+        <title>Facture #${order._id} — Paintello Home</title>
+        <style>
+          body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 40px; color: #111; max-width: 800px; margin: 0 auto; background: #fff; }
+          .header { display: flex; justify-content: space-between; align-items: center; border-b: 2px solid #111; padding-bottom: 20px; margin-bottom: 30px; }
+          .logo { font-size: 24px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; }
+          .invoice-title { font-size: 18px; text-transform: uppercase; color: #555; }
+          .grid { display: flex; justify-content: space-between; margin-bottom: 30px; font-size: 13px; line-height: 1.6; }
+          table { w-full; width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 13px; }
+          th { text-align: left; padding: 10px; border-bottom: 2px solid #ddd; text-transform: uppercase; font-size: 11px; }
+          td { padding: 12px 10px; border-bottom: 1px solid #eee; }
+          .totals { text-align: right; font-size: 14px; line-height: 1.8; }
+          .grand-total { font-size: 18px; font-weight: bold; color: #000; border-top: 2px solid #111; padding-top: 10px; margin-top: 10px; }
+          .no-print { margin-top: 40px; text-align: center; }
+          .btn-print { padding: 12px 25px; background: #111; color: #fff; border: none; font-size: 12px; text-transform: uppercase; font-weight: bold; cursor: pointer; border-radius: 4px; }
+          @media print { .no-print { display: none; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="logo">PAINTELLO HOME</div>
+          <div class="invoice-title">Facture N° #${order._id.toString().substring(0, 8)}</div>
+        </div>
+
+        <div class="grid">
+          <div>
+            <strong>Facturé à:</strong><br>
+            ${order.firstName} ${order.lastName}<br>
+            Tél: ${order.formattedPhone || order.numero}<br>
+            ${order.address}<br>
+            ${order.commune}, ${order.city} (Algérie)
+          </div>
+          <div style="text-align: right;">
+            <strong>Date de commande:</strong> ${formattedDate}<br>
+            <strong>Mode de paiement:</strong> ${order.paymentMethod === 'chargily' ? 'Carte CIB/Edahabia' : 'Paiement à la livraison'}<br>
+            <strong>Statut:</strong> ${order.status.toUpperCase()}
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th style="text-align: center;">Quantité</th>
+              <th style="text-align: right;">Prix Unitaire</th>
+              <th style="text-align: right;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map(item => `
+              <tr>
+                <td>${item.item ? item.item.title : 'Produit'}</td>
+                <td style="text-align: center;">${item.qty}</td>
+                <td style="text-align: right;">${(item.price / item.qty).toLocaleString()} DA</td>
+                <td style="text-align: right;">${item.price.toLocaleString()} DA</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="totals">
+          <div>Frais de livraison (${order.city}): <strong>${(order.shippingFee || 0).toLocaleString()} DA</strong></div>
+          <div class="grand-total">Total TTC: ${(order.totalWithShipping || 0).toLocaleString()} DA</div>
+        </div>
+
+        <div class="no-print">
+          <button class="btn-print" onclick="window.print()">Imprimer la Facture / Télécharger PDF</button>
+        </div>
+      </body>
+      </html>
+    `);
+  } catch(e) {
+    console.error('Invoice error:', e);
+    res.status(500).send('Erreur lors de la génération de la facture');
+  }
+});
+
 // Confirmation page (GET)
 router.get("/order/deliver/:orderId", async (req, res) => {
   if (!safeCompare(req.query.secret, process.env.DELIVERY_SECRET)) {
