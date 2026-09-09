@@ -447,7 +447,7 @@ router.get('/admin/products/new', middleware.isLoggedIn, requireAdmin, async (re
 
 router.post('/admin/products/new', middleware.isLoggedIn, requireAdmin, async (req, res) => {
   try {
-    const { title, subtitle, price, buyPrice, oldPrice, stock, category, type, modelType, image, description, status, href, videoId, videoFile, stlFile } = req.body;
+    const { title, subtitle, price, buyPrice, oldPrice, stock, category, type, modelType, image, transparentImage, description, status, href, videoId, videoFile, stlFile } = req.body;
 
     if (!title || !price) {
       req.flash('error', 'Product title and price are required.');
@@ -475,6 +475,7 @@ router.post('/admin/products/new', middleware.isLoggedIn, requireAdmin, async (r
         category: (category || 'vases').toLowerCase().trim(),
         type: (type || '').toLowerCase().trim(),
         image: imageArray,
+        transparentImage: transparentImage ? transparentImage.trim() : null,
         status: status ? status.trim() : 'New',
         href: href ? href.trim() : undefined
       });
@@ -489,6 +490,7 @@ router.post('/admin/products/new', middleware.isLoggedIn, requireAdmin, async (r
         type: (type || category || 'vases').toLowerCase().trim(),
         disponible: isDisponible,
         image: imageArray,
+        transparentImage: transparentImage ? transparentImage.trim() : null,
         description: description ? description.trim() : '',
         videoId: videoId ? videoId.trim() : undefined,
         videoFile: videoFile ? videoFile.trim() : null,
