@@ -28,6 +28,14 @@ const ReturnRequest = require('../models/ReturnRequest');
 const { isLoggedIn } = require('../middleware/index');
 const mongoose = require('mongoose');
 const { sendAdminOrderEmail, sendClientReplyEmail, sendReturnConfirmationEmail } = require('../utils/mailer');
+
+// Middleware to capture referral link (e.g. ?ref=REF-123456)
+router.use((req, res, next) => {
+  if (req.query.ref) {
+    req.session.referralCode = req.query.ref.toString().trim().toUpperCase();
+  }
+  next();
+});
 const Blue = require('../models/blue');
 const Pink = require('../models/pink');
 const Grey = require('../models/grey');
@@ -724,6 +732,9 @@ router.post("/checkout", async (req, res) => {
     } catch(e) {
       console.warn("Coupon process warning:", e.message);
     }
+  } else if (req.session.referralCode) {
+    // Automatic 10% referral discount for friends
+    couponDiscount = (cart.totalPrice * 10) / 100;
   }
 
   const finalTotalPrice = Math.max(0, cart.totalPrice - couponDiscount + shippingFee);

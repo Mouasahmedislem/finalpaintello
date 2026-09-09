@@ -316,10 +316,16 @@
                         </div>
                     </div>
 
-                    <!-- PDF Invoice Download Button -->
-                    <% if (typeof orderId !== 'undefined' && orderId) { %>
-                        <div class="mt-6 pt-4 border-t border-gray-100 text-center">
-                            <a href="/order/invoice/<%= orderId %>" target="_blank" class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-black text-white text-xs uppercase tracking-wider font-semibold hover:bg-gray-800 transition rounded-lg shadow-sm">
+                    <!-- Free 1-Click WhatsApp Order Confirmation & PDF Invoice -->
+                    <% if (typeof orderId !== 'undefined' && orderId) {
+                        const waNumber = (typeof process !== 'undefined' && process.env.WHATSAPP_PHONE) ? process.env.WHATSAPP_PHONE : '213791679611';
+                        const waConfirmText = encodeURIComponent(`Bonjour Paintello Home, je confirme ma commande #${orderId.substring(0,8)} d'un montant de ${totalPrice} DZD.`);
+                    %>
+                        <div class="mt-6 pt-4 border-t border-gray-100 space-y-3 text-center">
+                            <a href="https://wa.me/<%= waNumber %>?text=<%= waConfirmText %>" target="_blank" rel="noopener" class="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white text-xs uppercase tracking-wider font-semibold hover:bg-emerald-700 transition rounded-lg shadow-sm">
+                                <i class="fab fa-whatsapp text-sm"></i> Confirmer ma commande sur WhatsApp (Gratuit)
+                            </a>
+                            <a href="/order/invoice/<%= orderId %>" target="_blank" class="w-full inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-black text-white text-xs uppercase tracking-wider font-semibold hover:bg-gray-800 transition rounded-lg shadow-sm">
                                 <i class="fas fa-file-invoice mr-1"></i> Télécharger la Facture (PDF)
                             </a>
                         </div>
@@ -336,6 +342,28 @@
                     <i class="fas fa-home mr-2"></i>Retour à l'Accueil
                 </a>
             </div>
+
+            <!-- Referral Program "Inviter un Ami (-10%)" -->
+            <% if (typeof orderId !== 'undefined' && orderId) {
+                const host = (typeof req !== 'undefined' && req.get) ? req.get('host') : 'www.paintello.uk';
+                const refCode = 'REF-' + orderId.substring(0, 6).toUpperCase();
+                const refUrl = `https://${host}/?ref=${refCode}`;
+                const waShareText = encodeURIComponent(`Découvre Paintello Home ! Utilise mon lien pour bénéficier de 10% de réduction sur tes vases et déco : ${refUrl}`);
+            %>
+                <div class="zara-card p-6 mt-6 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                    <div class="flex items-center justify-center gap-2 text-amber-800">
+                        <i class="fa-solid fa-gift text-lg"></i>
+                        <h3 class="text-xs font-bold uppercase tracking-wider">Offrez 10% à un Ami</h3>
+                    </div>
+                    <p class="text-xs text-slate-600">Partagez votre lien de parrainage exclusif. Votre ami bénéficiera automatiquement de <strong>10% de réduction</strong> sur sa commande.</p>
+                    <div class="flex items-center gap-2 max-w-md mx-auto">
+                        <input type="text" readonly value="<%= refUrl %>" class="flex-1 px-3 py-2 text-xs bg-white border border-slate-300 rounded font-mono select-all">
+                        <a href="https://wa.me/?text=<%= waShareText %>" target="_blank" rel="noopener" class="px-4 py-2 bg-emerald-600 text-white text-xs font-semibold uppercase tracking-wider rounded hover:bg-emerald-700 transition flex items-center gap-1.5 whitespace-nowrap">
+                            <i class="fab fa-whatsapp"></i> Partager
+                        </a>
+                    </div>
+                </div>
+            <% } %>
 
             <!-- Help Section -->
             <div class="zara-card p-6 mt-8 text-center">
