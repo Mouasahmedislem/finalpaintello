@@ -2659,7 +2659,12 @@ input:focus, select:focus, textarea:focus {
     <% if (has3DModel) { %>
       <div id="model3d" class="tab-panel">
         <div class="bg-gray-50 rounded-xl p-4 relative">
-          <div id="modelViewer" class="model-viewer-container w-full h-96 rounded-lg overflow-hidden relative"></div>
+          <div id="modelViewer" class="model-viewer-container w-full h-96 rounded-lg overflow-hidden relative">
+            <!-- Close / Exit Fullscreen Floating Button -->
+            <button type="button" id="exit3DFullscreenBtn" class="absolute top-4 right-4 z-50 w-9 h-9 bg-slate-900/80 hover:bg-slate-900 text-white rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-105 hidden" title="Quitter le plein écran">
+              <i class="fa-solid fa-xmark text-base"></i>
+            </button>
+          </div>
 
           <!-- Fullscreen / AR Expand Button -->
           <button type="button" id="fullscreen3DBtn" class="mt-3 w-full py-2 bg-slate-900 text-white text-xs font-semibold uppercase tracking-wider rounded-lg hover:bg-slate-800 transition flex items-center justify-center gap-2">
@@ -3193,27 +3198,42 @@ input:focus, select:focus, textarea:focus {
 
         // Fullscreen 3D model viewer overlay (Cross-platform for PC & Mobile Safari/Android)
         const fsBtn = document.getElementById('fullscreen3DBtn');
+        const exitFsBtn = document.getElementById('exit3DFullscreenBtn');
         const modelContainer = document.getElementById('modelViewer');
-        if (fsBtn && modelContainer) {
-          fsBtn.addEventListener('click', function() {
-            const isFullscreen = modelContainer.classList.contains('mobile-fullscreen-active');
-            if (isFullscreen) {
-              modelContainer.classList.remove('mobile-fullscreen-active');
-              if (document.exitFullscreen) document.exitFullscreen().catch(()=>{});
-            } else {
-              if (modelContainer.requestFullscreen) {
-                modelContainer.requestFullscreen().catch(() => {
-                  modelContainer.classList.add('mobile-fullscreen-active');
-                });
-              } else if (modelContainer.webkitRequestFullscreen) {
-                modelContainer.webkitRequestFullscreen();
-              } else {
-                modelContainer.classList.add('mobile-fullscreen-active');
-              }
+
+        function toggleFullscreen3D(enable) {
+          if (!modelContainer) return;
+          if (enable) {
+            modelContainer.classList.add('mobile-fullscreen-active');
+            if (exitFsBtn) exitFsBtn.classList.remove('hidden');
+            if (modelContainer.requestFullscreen) {
+              modelContainer.requestFullscreen().catch(()=>{});
+            } else if (modelContainer.webkitRequestFullscreen) {
+              modelContainer.webkitRequestFullscreen();
             }
-            setTimeout(() => window.dispatchEvent(new Event('resize')), 150);
-          });
+          } else {
+            modelContainer.classList.remove('mobile-fullscreen-active');
+            if (exitFsBtn) exitFsBtn.classList.add('hidden');
+            if (document.fullscreenElement && document.exitFullscreen) {
+              document.exitFullscreen().catch(()=>{});
+            }
+          }
+          setTimeout(() => window.dispatchEvent(new Event('resize')), 150);
         }
+
+        if (fsBtn) {
+          fsBtn.addEventListener('click', () => toggleFullscreen3D(true));
+        }
+        if (exitFsBtn) {
+          exitFsBtn.addEventListener('click', () => toggleFullscreen3D(false));
+        }
+
+        document.addEventListener('fullscreenchange', function() {
+          if (!document.fullscreenElement && exitFsBtn) {
+            exitFsBtn.classList.add('hidden');
+            modelContainer.classList.remove('mobile-fullscreen-active');
+          }
+        });
       });
     })();
   </script>
@@ -4630,8 +4650,43 @@ document.addEventListener('DOMContentLoaded', function() {
     const ctx = canvas.getContext('2d');
     let roomImg = null;
     let vaseImg = new Image();
+    let transparentVaseCanvas = null;
+
     vaseImg.crossOrigin = 'anonymous';
+    vaseImg.onload = function() {
+      processVaseBackgroundRemoval();
+    };
     vaseImg.src = "<%= producthome && producthome.image && producthome.image[0] ? producthome.image[0] : '/img/logo.png' %>";
+
+    function processVaseBackgroundRemoval() {
+      try {
+        const offCanvas = document.createElement('canvas');
+        offCanvas.width = vaseImg.width;
+        offCanvas.height = vaseImg.height;
+        const offCtx = offCanvas.getContext('2d');
+        offCtx.drawImage(vaseImg, 0, 0);
+
+        const imgData = offCtx.getImageData(0, 0, offCanvas.width, offCanvas.height);
+        const data = imgData.data;
+
+        // Sample white/light studio background pixels and remove white background
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          // Near white / light grey studio backdrop
+          if (r > 235 && g > 235 && b > 235) {
+            data[i + 3] = 0; // Set transparent alpha
+          }
+        }
+        offCtx.putImageData(imgData, 0, 0);
+        transparentVaseCanvas = offCanvas;
+        if (roomImg) draw();
+      } catch(e) {
+        console.warn('Canvas background removal CORS or processing fallback:', e.message);
+        transparentVaseCanvas = vaseImg;
+      }
+    }
 
     let vaseX = 200;
     let vaseY = 200;
@@ -4689,22 +4744,25 @@ document.addEventListener('DOMContentLoaded', function() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(roomImg, 0, 0, canvas.width, canvas.height);
 
-      if (vaseImg.complete && vaseImg.naturalWidth !== 0) {
+      const renderSource = transparentVaseCanvas || vaseImg;
+      if (renderSource && (renderSource.width || renderSource.naturalWidth)) {
         const scale = parseFloat(scaleInput.value) || 0.7;
         const rotate = (parseFloat(rotateInput.value) || 0) * Math.PI / 180;
+        const sWidth = renderSource.width || renderSource.naturalWidth;
+        const sHeight = renderSource.height || renderSource.naturalHeight;
         const vWidth = (canvas.width * 0.25) * scale;
-        const vHeight = (vWidth * (vaseImg.height / vaseImg.width));
+        const vHeight = (vWidth * (sHeight / sWidth));
 
         ctx.save();
         ctx.translate(vaseX, vaseY);
         ctx.rotate(rotate);
 
-        // Crop padding / apply rounded cutout for clean vase integration
-        ctx.beginPath();
-        ctx.ellipse(0, 0, vWidth * 0.48, vHeight * 0.48, 0, 0, 2 * Math.PI);
-        ctx.clip();
+        // Soft natural drop shadow for realistic room integration
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+        ctx.shadowBlur = 15;
+        ctx.shadowOffsetY = 10;
 
-        ctx.drawImage(vaseImg, -vWidth / 2, -vHeight / 2, vWidth, vHeight);
+        ctx.drawImage(renderSource, -vWidth / 2, -vHeight / 2, vWidth, vHeight);
         ctx.restore();
       }
     }
