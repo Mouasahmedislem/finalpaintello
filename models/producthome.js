@@ -21,7 +21,11 @@ const producthomeSchema = new mongoose.Schema({
     type: Number,
     default: 10
   },
-  image: [String],         
+  image: [String],
+  transparentImage: {
+    type: String,
+    default: null
+  },
   description: String,     
   details: Object,         
   // 👇 MAKE TYPE MORE STRUCTURED

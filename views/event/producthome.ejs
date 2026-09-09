@@ -2661,8 +2661,8 @@ input:focus, select:focus, textarea:focus {
         <div class="bg-gray-50 rounded-xl p-4 relative">
           <div id="modelViewer" class="model-viewer-container w-full h-96 rounded-lg overflow-hidden relative">
             <!-- Close / Exit Fullscreen Floating Button -->
-            <button type="button" id="exit3DFullscreenBtn" class="absolute top-4 right-4 z-50 w-9 h-9 bg-slate-900/80 hover:bg-slate-900 text-white rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-105 hidden" title="Quitter le plein écran">
-              <i class="fa-solid fa-xmark text-base"></i>
+            <button type="button" id="exit3DFullscreenBtn" class="fixed top-6 right-6 z-[100000] w-12 h-12 bg-slate-900 text-white rounded-full flex items-center justify-center shadow-2xl border-2 border-white transition-transform active:scale-95 hidden" title="Quitter le plein écran">
+              <i class="fa-solid fa-xmark text-xl"></i>
             </button>
           </div>
 
@@ -3222,10 +3222,11 @@ input:focus, select:focus, textarea:focus {
         }
 
         if (fsBtn) {
-          fsBtn.addEventListener('click', () => toggleFullscreen3D(true));
+          fsBtn.addEventListener('click', (e) => { e.preventDefault(); toggleFullscreen3D(true); });
         }
         if (exitFsBtn) {
-          exitFsBtn.addEventListener('click', () => toggleFullscreen3D(false));
+          exitFsBtn.addEventListener('click', (e) => { e.preventDefault(); toggleFullscreen3D(false); });
+          exitFsBtn.addEventListener('touchstart', (e) => { e.preventDefault(); toggleFullscreen3D(false); });
         }
 
         document.addEventListener('fullscreenchange', function() {
@@ -4656,7 +4657,7 @@ document.addEventListener('DOMContentLoaded', function() {
     vaseImg.onload = function() {
       processVaseBackgroundRemoval();
     };
-    vaseImg.src = "<%= producthome && producthome.image && producthome.image[0] ? producthome.image[0] : '/img/logo.png' %>";
+    vaseImg.src = "<%= producthome && producthome.transparentImage ? producthome.transparentImage : (producthome && producthome.image && producthome.image[0] ? producthome.image[0] : '/img/logo.png') %>";
 
     function processVaseBackgroundRemoval() {
       try {

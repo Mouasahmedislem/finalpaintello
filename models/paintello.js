@@ -16,6 +16,10 @@ const paintelloSchema = new mongoose.Schema({
     default: 10
   },
   image: [String],
+  transparentImage: {
+    type: String,
+    default: null
+  },
   href: String,
   status: String,
   category: {
