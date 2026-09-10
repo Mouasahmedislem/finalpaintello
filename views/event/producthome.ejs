@@ -3809,7 +3809,7 @@ if (addForm) {
       console.warn('fbq AddToCart failed', err);
     }
 
-    // Push GA4 add_to_cart event to window.dataLayer (matching GTM tag parameters)
+    // Push GA4 add_to_cart event to window.dataLayer (matching GTM tag parameters & standard ecommerce items)
     try {
       window.dataLayer = window.dataLayer || [];
       window.dataLayer.push({
@@ -3822,7 +3822,17 @@ if (addForm) {
         item_id: mainProductId,
         productName: <%- JSON.stringify(producthome.title) %>,
         item_name: <%- JSON.stringify(producthome.title) %>,
-        quantity: mainQty
+        quantity: mainQty,
+        ecommerce: {
+          currency: 'DZD',
+          value: totalValue,
+          items: [{
+            item_id: mainProductId,
+            item_name: <%- JSON.stringify(producthome.title) %>,
+            price: mainPrice,
+            quantity: mainQty
+          }]
+        }
       });
     } catch(e) {
       console.warn('dataLayer add_to_cart push failed', e);
@@ -3837,7 +3847,7 @@ if (addForm) {
 
     setTimeout(() => {
       window.location.href = redirectUrl;
-    }, 150);
+    }, 500);
   });
 }
 
