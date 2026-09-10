@@ -1650,6 +1650,108 @@ router.post('/notify-me/:productId', async (req,res) => {
   }catch(e){ console.error(e); res.status(500).json({success:false,message:'Erreur serveur'}); }
 });
 
+// Dynamic XML Sitemap for Automatic Google Search Indexing
+router.get('/sitemap.xml', async (req, res) => {
+  try {
+    const host = req.get('host') || 'paintello.uk';
+    const baseUrl = `https://${host}`;
+
+    const [homeProducts, paintelloProducts] = await Promise.all([
+      Producthome.find({}).lean(),
+      Paintello.find({}).lean()
+    ]);
+
+    function escapeXml(unsafe) {
+      return (unsafe || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>${baseUrl}/</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/shop</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/paintello</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/contact</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+`;
+
+    homeProducts.forEach(p => {
+      const pId = p._id.toString();
+      const pDate = p.updatedAt ? new Date(p.updatedAt).toISOString().split('T')[0] : today;
+      xml += `  <url>
+    <loc>${escapeXml(`${baseUrl}/producthome/${pId}`)}</loc>
+    <lastmod>${pDate}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>\n`;
+    });
+
+    paintelloProducts.forEach(p => {
+      if (p.href && p.href.startsWith('/producthome/')) {
+        const pDate = p.updatedAt ? new Date(p.updatedAt).toISOString().split('T')[0] : today;
+        xml += `  <url>
+    <loc>${escapeXml(`${baseUrl}${p.href}`)}</loc>
+    <lastmod>${pDate}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>\n`;
+      }
+    });
+
+    xml += `</urlset>`;
+
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.send(xml);
+
+  } catch (err) {
+    console.error('❌ Sitemap error:', err);
+    res.status(500).send('Sitemap Error');
+  }
+});
+
+// Dynamic robots.txt pointing Googlebot to Sitemap
+router.get('/robots.txt', (req, res) => {
+  const host = req.get('host') || 'paintello.uk';
+  const baseUrl = `https://${host}`;
+
+  const robots = `User-agent: *
+Allow: /
+Disallow: /user/admin/
+Disallow: /checkout
+Disallow: /confirmation
+
+Sitemap: ${baseUrl}/sitemap.xml
+`;
+
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.send(robots);
+});
+
 // Meta Advantage+ Catalog Dynamic XML Product Feed
 router.get(['/catalog.xml', '/feed/facebook.xml'], async (req, res) => {
   try {
