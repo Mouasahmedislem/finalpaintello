@@ -4,11 +4,11 @@ WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm ci --only=production
+# Install all production dependencies (including git dependencies like nodemailer)
+RUN apk add --no-cache git && npm ci --only=production
 
 COPY . .
 
-# Google Cloud Run injects PORT (default 8080) at runtime
 ENV PORT=8080
 EXPOSE 8080
 
